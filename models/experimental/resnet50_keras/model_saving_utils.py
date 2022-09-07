@@ -35,6 +35,7 @@ except ImportError:
 def save_model(model, model_dir, weights_file):
   """Saves the model weights."""
   weights_file_path = os.path.join(model_dir, weights_file)
+  model.save(model_dir)
   del model_dir, weights_file  # avoid accident usages.
 
   if not HAS_H5PY:

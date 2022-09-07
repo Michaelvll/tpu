@@ -20,6 +20,17 @@ Keras support. This is configured for ImageNet (e.g. 1000 classes), but you can
 easily adapt to your own datasets by changing the code appropriately.
 """
 
+"""
+On tpu-v3-8, the batch size is 1024
+# Train, float32.
+python3 models/experimental/resnet50_keras/resnet50.py \
+  --tpu=$TPU_NAME \
+  --data=$DATA_DIR \
+  --use_bfloat16=False \
+  --model_dir=gs://resnet-test/resnet-realImagenet-float32 \
+    2>&1 | tee run-realData-float32.log
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -59,7 +70,6 @@ IMAGENET_VALIDATION_IMAGES = 50000  # Number of images.
 PER_CORE_BATCH_SIZE = 128
 
 # Training hyperparameters.
-USE_BFLOAT16 = True
 BASE_LEARNING_RATE = 0.4
 # Learning rate schedule
 LR_SCHEDULE = [    # (multiplier, epoch to start) tuples
@@ -74,6 +84,7 @@ flags.DEFINE_integer('num_epochs', EPOCHS, '')
 flags.DEFINE_integer(
     'steps_per_epoch', None,
     'Steps for epoch during training. If unspecified, use default value.')
+flags.DEFINE_boolean('use_bfloat16', True, 'Use bfloat16 instead of float32.')
 
 FLAGS = flags.FLAGS
 
@@ -180,7 +191,7 @@ def main(unused_argv):
   tf.tpu.experimental.initialize_tpu_system(resolver)
   strategy = tf.distribute.experimental.TPUStrategy(resolver)
 
-  logging.info('Use bfloat16: %s.', USE_BFLOAT16)
+  logging.info('Use bfloat16: %s.', FLAGS.use_bfloat16)
   logging.info('Use global batch size: %s.', batch_size)
   logging.info('Enable top 5 accuracy: %s.', FLAGS.eval_top_5_accuracy)
   logging.info('Training model using data in directory "%s".', FLAGS.data)
@@ -203,10 +214,10 @@ def main(unused_argv):
 
   imagenet_train = imagenet_input.ImageNetInput(
       is_training=True, data_dir=FLAGS.data, batch_size=batch_size,
-      use_bfloat16=USE_BFLOAT16)
+      use_bfloat16=FLAGS.use_bfloat16)
   imagenet_eval = imagenet_input.ImageNetInput(
       is_training=False, data_dir=FLAGS.data, batch_size=batch_size,
-      use_bfloat16=USE_BFLOAT16)
+      use_bfloat16=FLAGS.use_bfloat16)
 
   lr_schedule_cb = LearningRateBatchScheduler(
       schedule=learning_rate_schedule_wrapper(training_steps_per_epoch))
